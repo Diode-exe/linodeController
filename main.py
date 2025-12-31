@@ -6,7 +6,7 @@ from tkinter import ttk
 
 root = tk.Tk()
 root.title("Linode Controller")
-root.geometry("300x300")
+root.geometry("400x300")
 
 try:
     with open("api.txt", "r") as f:
@@ -155,7 +155,15 @@ def get_quota():
     r.raise_for_status()
     usedOfQuota = r.json()["used"]
     entireQuota = r.json()["quota"]
-    getQuotaVar.set(f"{usedOfQuota} GB used of {entireQuota} GB")
+    getQuotaVar.set(f"Network transfer: {usedOfQuota} GB used of {entireQuota} GB ({usedOfQuota / entireQuota * 100:.1f}%)")
+    ratio = usedOfQuota / entireQuota
+
+    if ratio >= 0.85:
+        getQuotaLabel.config(fg="red")
+    elif ratio >= 0.75:
+        getQuotaLabel.config(fg="orange")
+    elif ratio >= 0.65:
+        getQuotaLabel.config(fg="yellow")
     infoLabelVar.set("...")
     getStatusBtn.config(state=tk.ACTIVE)
 
