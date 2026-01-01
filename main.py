@@ -3,25 +3,33 @@ import tkinter as tk
 from tkinter import messagebox
 import datetime
 from tkinter import ttk
+import sys
 
 root = tk.Tk()
 root.title("Linode Controller")
 root.geometry("400x300")
 
+API_TOKEN = None
 try:
     with open("api.txt", "r") as f:
         for line in f:
-            API_TOKEN = line    
+            token = line.strip()
+            if token:
+                API_TOKEN = token
+                break
+    if not API_TOKEN:
+        raise ValueError("api.txt is empty or contains only blank lines.")
 except FileNotFoundError:
     print("api.txt does not exist!")
+    sys.exit(1)
+except Exception as e:
+    print(f"Error reading api.txt: {e}")
+    sys.exit(1)
 
-try:
-    HEADERS = {
-        "Authorization": f"Bearer {API_TOKEN}",
-        "Content-Type": "application/json",
-    }
-except NameError:
-    print("api.txt may not exist")
+HEADERS = {
+    "Authorization": f"Bearer {API_TOKEN}",
+    "Content-Type": "application/json",
+}
 
 # Map Linode IDs to names
 # idAndNames = {89221831: "TSNode1"}
@@ -97,6 +105,24 @@ def power_off():
         else:
             messagebox.showerror("Error", response.text)
 
+def reboot():
+    if messagebox.askyesno("Are you sure?", "Are you sure you want to reboot the Linode?") == True:
+        powerOnBtn.config(state=tk.DISABLED)
+        powerOffBtn.config(state=tk.DISABLED)
+        rebootBtn.config(state=tk.DISABLED)
+        url = f"https://api.linode.com/v4/linode/instances/{selected_linode_id}/reboot"
+        response = requests.post(url, headers=HEADERS)
+        if response.ok:
+            infoLabelVar.set("Linode is rebooting")
+            root.after(5000, infoLabelVar.set("..."))
+            get_status_no_ip()
+            powerOnBtn.config(state=tk.ACTIVE)
+            powerOffBtn.config(state=tk.ACTIVE)
+            rebootBtn.config(state=tk.ACTIVE)
+            root.after(refreshDelayVar.get(), get_status_no_ip())
+        else:
+            messagebox.showerror("Error", response.text)
+
 def get_status():
     getStatusBtn.config(state=tk.DISABLED)
     infoLabelVar.set("Getting status...")
@@ -115,7 +141,7 @@ def get_status():
     get_quota()
     last_updated()
     if auto_refresh_var.get():
-        root.after(60000, get_status)
+        root.after(refreshDelayVar.get(), get_status)
     infoLabelVar.set("...")
     getStatusBtn.config(state=tk.ACTIVE)
     return status
@@ -168,7 +194,11 @@ def get_quota():
     getStatusBtn.config(state=tk.ACTIVE)
 
 # Currently selected Linode ID
-selected_linode_id = next(iter(idAndNames))
+try:
+    selected_linode_id = next(iter(idAndNames))
+except StopIteration:
+    selected_linode_id = None
+    messagebox.showerror("Error", "No Linodes found for the provided API token.")
 
 # url = f"https://api.linode.com/v4/linode/instances/{selected_linode_id}"
 # r = requests.get(url, headers=HEADERS)
@@ -213,6 +243,8 @@ powerOnBtn = tk.Button(power_button_frame, text="Power On", command=power_on)
 powerOffBtn = tk.Button(power_button_frame, text="Power Off", command=power_off)
 powerOnBtn.pack(side="left", padx=5)
 powerOffBtn.pack(side="left", padx=5)
+rebootBtn = tk.Button(power_button_frame, text="Reboot", command=reboot)
+rebootBtn.pack(side="left", padx=5)
 
 usageQuotaFrame = tk.Frame(root)
 usageQuotaFrame.pack(pady=5)
@@ -242,6 +274,10 @@ getStatusBtn = tk.Button(
 )
 getStatusBtn.pack(side="left", padx=5)
 
+refreshDelayVar = tk.StringVar(value="60000")
+refreshDelay = tk.Entry(statusCntrlsFrame, width=30, textvariable=refreshDelayVar)
+refreshDelay.pack()
+
 infoLabelFrame = tk.Frame(root)
 infoLabelFrame.pack(fill="x", pady=5)
 separator = ttk.Separator(infoLabelFrame, orient="horizontal")
@@ -256,4 +292,8 @@ if __name__ == "__main__":
         powerOnBtn.config(state=tk.DISABLED)
     elif "offline" in get_status():
         powerOffBtn.config(state=tk.DISABLED)
+    else:
+        powerOnBtn.config(state=tk.ACTIVE)
+        powerOffBtn.config(state=tk.ACTIVE)
+        rebootBtn.config(state=tk.ACTIVE)
     root.mainloop()
