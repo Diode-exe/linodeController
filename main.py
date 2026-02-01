@@ -18,7 +18,7 @@ try:
                 API_TOKEN = token
                 break
     if not API_TOKEN:
-        raise ValueError("api.txt is empty or contains only blank lines.")
+        raise ValueError("api.txt is empty")
 except FileNotFoundError:
     print("api.txt does not exist!")
     sys.exit(1)
