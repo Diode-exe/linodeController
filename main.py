@@ -170,7 +170,7 @@ def copy_ipv6():
 
 def last_updated():
     lastUpdatedTime = datetime.datetime.now().replace(microsecond=0)  # strip microseconds
-    lastUpdatedLabel.set(f"Last updated: {lastUpdatedTime.strftime("%Y-%m-%d %H:%M:%S")}")
+    lastUpdatedLabel.set(f"Last updated: {lastUpdatedTime.strftime('%Y-%m-%d %H:%M:%S')}")
 
 def get_quota():
     url = "https://api.linode.com/v4/account/transfer"
